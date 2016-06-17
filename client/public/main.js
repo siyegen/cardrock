@@ -7,11 +7,22 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 console.log("Main");
 
+function simpleUUID() {
+  var len = 10;
+  var uuid = [];
+  for (var i = 0; i < len; i++) {
+    uuid.push(Math.floor(97 + Math.random() * (122 - 97)));
+  }
+  console.log("moo uuid");
+  return String.fromCharCode.apply(String, uuid);
+}
+
 var Game = function Game() {
   _classCallCheck(this, Game);
 
   this.conn = new GameConnection("localhost:9090");
-  this.sendControl = document.getElementById("send");
+  this.sendControl = document.getElementById("start");
+  this.playerID = simpleUUID();
 };
 
 var GameConnection = (function () {
@@ -43,11 +54,11 @@ var GameConnection = (function () {
 })();
 
 var runningGame = new Game();
+console.log("uuid", runningGame.playerID);
 
 runningGame.sendControl.addEventListener("click", function () {
   console.log("Send!");
-  var value = document.getElementById("msg").value;
-  document.getElementById("msg").value = "";
+  var value = "cats";
   runningGame.conn.wsConn.send(value);
 });
 
