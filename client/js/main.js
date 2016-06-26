@@ -13,8 +13,18 @@ function simpleUUID() {
 class Game {
   constructor() {
     this.conn = new GameConnection("localhost:9090");
-    this.sendControl = document.getElementById("start");
+    this.startButton = document.getElementById("start");
     this.playerID = simpleUUID();
+
+    this.state = "NEW";
+  }
+  loop() {
+
+  }
+  start() {
+    if (this.state != "NEW") return;
+    console.log("uuid", runningGame.playerID);
+    this.state = "START";
   }
 }
 
@@ -35,10 +45,7 @@ class GameConnection {
 }
 
 let runningGame = new Game();
-console.log("uuid", runningGame.playerID);
 
-runningGame.sendControl.addEventListener("click", () => {
-  console.log("Send!");
-  let value = "cats";
-  runningGame.conn.wsConn.send(value);
+runningGame.startButton.addEventListener("click", () => {
+
 });

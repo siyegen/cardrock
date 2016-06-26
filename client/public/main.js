@@ -17,13 +17,31 @@ function simpleUUID() {
   return String.fromCharCode.apply(String, uuid);
 }
 
-var Game = function Game() {
-  _classCallCheck(this, Game);
+var Game = (function () {
+  function Game() {
+    _classCallCheck(this, Game);
 
-  this.conn = new GameConnection("localhost:9090");
-  this.sendControl = document.getElementById("start");
-  this.playerID = simpleUUID();
-};
+    this.conn = new GameConnection("localhost:9090");
+    this.startButton = document.getElementById("start");
+    this.playerID = simpleUUID();
+
+    this.state = "NEW";
+  }
+
+  _createClass(Game, [{
+    key: "loop",
+    value: function loop() {}
+  }, {
+    key: "start",
+    value: function start() {
+      if (this.state != "NEW") return;
+      console.log("uuid", runningGame.playerID);
+      this.state = "START";
+    }
+  }]);
+
+  return Game;
+})();
 
 var GameConnection = (function () {
   function GameConnection(addr) {
@@ -54,12 +72,7 @@ var GameConnection = (function () {
 })();
 
 var runningGame = new Game();
-console.log("uuid", runningGame.playerID);
 
-runningGame.sendControl.addEventListener("click", function () {
-  console.log("Send!");
-  var value = "cats";
-  runningGame.conn.wsConn.send(value);
-});
+runningGame.startButton.addEventListener("click", function () {});
 
 },{}]},{},[1])
