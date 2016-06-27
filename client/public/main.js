@@ -25,18 +25,39 @@ var Game = (function () {
     this.startButton = document.getElementById("start");
     this.playerID = simpleUUID();
 
+    this.searchTimer = 0;
+    this.refreshTimeMS = 10 * 1000; // x seconds
     this.state = "NEW";
+
+    // Binding, etc
+    this.loop = this.loop.bind(this);
   }
 
   _createClass(Game, [{
     key: "loop",
-    value: function loop() {}
+    value: function loop(dt, first) {
+      // For now all state logic here
+      if (this.state == "SEARCHING") {
+        if (dt - this.searchTimer >= this.refreshTimeMS) {
+          console.log("Refreshing search");
+          this.searchTimer = dt;
+        }
+      }
+      requestAnimationFrame(this.loop);
+    }
   }, {
     key: "start",
     value: function start() {
+      this.loop(performance.now(), true);
+    }
+  }, {
+    key: "begin",
+    value: function begin() {
+      // Part of searching for game
       if (this.state != "NEW") return;
       console.log("uuid", runningGame.playerID);
-      this.state = "START";
+      this.state = "SEARCHING";
+      this.searchTimer = performance.now();
     }
   }]);
 
@@ -72,7 +93,11 @@ var GameConnection = (function () {
 })();
 
 var runningGame = new Game();
+// Eventually should wait for connection to be ready
+runningGame.start();
 
-runningGame.startButton.addEventListener("click", function () {});
+runningGame.startButton.addEventListener("click", function () {
+  return runningGame.begin();
+});
 
 },{}]},{},[1])

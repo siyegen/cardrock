@@ -1,9 +1,13 @@
 package main
 
 import (
+	"crypto/md5"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -14,6 +18,21 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+func newUUID() string {
+	h := md5.New()
+	b := make([]byte, 16)
+	rand.Read(b)
+	io.WriteString(h, string(b))
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:])
+}
+
+var (
+	allConnections       = make(map[string]*Connection)
+	inGameConnections    = make(map[string]*Connection)
+	searchingConnections = make(map[string]*Connection)
+	ticker               = time.NewTicker(5 * time.Second)
+)
+
 func serveWS(res http.ResponseWriter, req *http.Request) {
 	ws, err := upgrader.Upgrade(res, req, nil)
 	if err != nil {
@@ -22,19 +41,15 @@ func serveWS(res http.ResponseWriter, req *http.Request) {
 	}
 	defer ws.Close()
 
-	ws.WriteMessage(websocket.TextMessage, []byte(`Message start`))
+	conn := broker(ws)
+	allConnections[conn.uuid] = conn
 
 	for {
-		mt, message, err := ws.ReadMessage()
-		if err != nil {
-			log.Println("read error:", err)
-			break
-		}
-		log.Printf("recv: %s", message)
-		err = ws.WriteMessage(mt, message)
-		if err != nil {
-			log.Println("write error:", err)
-			break
+		select {
+		case msg := <-conn.InputChan:
+			log.Printf("recv: %s\n", msg)
+		case <-ticker.C:
+			conn.write([]byte(`{"cmd":"tick_tock"}`))
 		}
 	}
 }
