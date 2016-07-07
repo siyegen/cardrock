@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -30,7 +29,7 @@ var (
 	allConnections       = make(map[string]*Connection)
 	inGameConnections    = make(map[string]*Connection)
 	searchingConnections = make(map[string]*Connection)
-	ticker               = time.NewTicker(5 * time.Second)
+	broker               = NewBroker()
 )
 
 func serveWS(res http.ResponseWriter, req *http.Request) {
@@ -41,23 +40,19 @@ func serveWS(res http.ResponseWriter, req *http.Request) {
 	}
 	defer ws.Close()
 
-	conn := broker(ws)
-	allConnections[conn.uuid] = conn
-
-	for {
-		select {
-		case msg := <-conn.InputChan:
-			log.Printf("recv: %s\n", msg)
-		case <-ticker.C:
-			conn.write([]byte(`{"cmd":"tick_tock"}`))
-		}
-	}
+	conn := brokerMessage(ws)
+	broker.join <- conn
+	log.Println("waiting for errChan")
+	<-conn.errChan
+	log.Println("Conn closed or error")
+	broker.disconnect <- conn
 }
 
 func main() {
 	fmt.Println("Yo Yo")
 	addr := "localhost:9090"
 
+	go broker.Run()
 	http.HandleFunc("/ws", serveWS)
 	log.Fatal(http.ListenAndServe(addr, nil))
 }

@@ -10,6 +10,7 @@ import (
 type Connection struct {
 	InputChan  chan []byte // In from client/player
 	OutputChan chan []byte // Out to client/player
+	errChan    chan struct{}
 	ws         *websocket.Conn
 	uuid       string
 }
@@ -18,6 +19,7 @@ func (c *Connection) readPump() error {
 	for {
 		_, msg, err := c.ws.ReadMessage()
 		if err == nil {
+			log.Println("readPump got Message")
 			c.InputChan <- msg
 			// player is still active, so bump their readDeadline
 			c.ws.SetReadDeadline(time.Now().Add(100 * time.Second))
@@ -49,12 +51,13 @@ func (c *Connection) write(payload []byte) error {
 	return c.ws.WriteMessage(websocket.TextMessage, payload)
 }
 
-func broker(ws *websocket.Conn) *Connection {
+func brokerMessage(ws *websocket.Conn) *Connection {
 	uuid := newUUID()
 	response := []byte(`{"cmd":"online", "session":` + uuid + `}`)
 	conn := &Connection{
 		InputChan:  make(chan []byte),
 		OutputChan: make(chan []byte),
+		errChan:    make(chan struct{}),
 		ws:         ws,
 		uuid:       uuid,
 	}
@@ -65,6 +68,7 @@ func broker(ws *websocket.Conn) *Connection {
 		err := conn.readPump()
 		if err != nil {
 			log.Println("Read failed, Error:", err)
+			conn.errChan <- struct{}{}
 		}
 	}()
 
@@ -72,6 +76,7 @@ func broker(ws *websocket.Conn) *Connection {
 		err := conn.writePump()
 		if err != nil {
 			log.Println("Write failed, Error:", err)
+			conn.errChan <- struct{}{}
 		}
 	}()
 

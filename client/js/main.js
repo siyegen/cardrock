@@ -17,7 +17,7 @@ class Game {
     this.playerID = simpleUUID();
 
     this.searchTimer = 0;
-    this.refreshTimeMS = 10*1000; // x seconds
+    this.refreshTimeMS = 2*1000; // x seconds
     this.state = "NEW";
 
     // Binding, etc
@@ -29,6 +29,8 @@ class Game {
       if (dt - this.searchTimer >= this.refreshTimeMS) {
         console.log("Refreshing search");
         this.searchTimer = dt;
+        this.conn.wsConn.send(JSON.stringify({uuid: "N/A",
+          state: "SEARCHING", ts: performance.now()}))
       }
     }
     requestAnimationFrame(this.loop);
@@ -41,6 +43,7 @@ class Game {
     console.log("uuid", runningGame.playerID);
     this.state = "SEARCHING";
     this.searchTimer = performance.now();
+    window.ttc = this.conn.wsConn;
   }
 }
 
