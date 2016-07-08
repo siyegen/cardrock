@@ -21,10 +21,17 @@ var Game = (function () {
   function Game() {
     _classCallCheck(this, Game);
 
-    this.conn = new GameConnection("localhost:9090");
-    this.startButton = document.getElementById("start");
+    // Get from server
     this.playerID = simpleUUID();
+    this.host = "localhost";
+    this.login();
 
+    // this.conn = new GameConnection(``);
+    this.conn = new WebSocket("ws://" + this.host + ":9090/ws");
+    this.conn.onclose = this.onclose;
+    this.conn.onmessage = this.onMessage;
+
+    this.startButton = document.getElementById("start");
     this.searchTimer = 0;
     this.refreshTimeMS = 2 * 1000; // x seconds
     this.state = "NEW";
@@ -34,6 +41,13 @@ var Game = (function () {
   }
 
   _createClass(Game, [{
+    key: "login",
+    value: function login() {
+      // $.ajax(``).done(msg => {
+      //
+      // });
+    }
+  }, {
     key: "loop",
     value: function loop(dt, first) {
       // For now all state logic here
@@ -62,21 +76,7 @@ var Game = (function () {
       this.searchTimer = performance.now();
       window.ttc = this.conn.wsConn;
     }
-  }]);
-
-  return Game;
-})();
-
-var GameConnection = (function () {
-  function GameConnection(addr) {
-    _classCallCheck(this, GameConnection);
-
-    this.wsConn = new WebSocket("ws://" + addr + "/ws");
-    this.wsConn.onclose = this.onclose;
-    this.wsConn.onmessage = this.onMessage;
-  }
-
-  _createClass(GameConnection, [{
+  }, {
     key: "onClose",
     value: function onClose(evt) {
       console.log("socket closed");
@@ -85,14 +85,26 @@ var GameConnection = (function () {
     key: "onMessage",
     value: function onMessage(evt) {
       console.log("msg", evt.data);
-      console.info(evt);
+      var msg = JSON.parse(evt.data);
+      if (msg["cmd"] === undefined) {
+        console.error("Bad message", evt);
+        return;
+      }
+      switch (msg.cmd) {
+        case "joined":
+          console.info("new connection");
+          this.serverID = msg['session'];
+          break;
+        default:
+          console.info("No match", msg.CMD);
+      }
     }
   }, {
     key: "onOpen",
     value: function onOpen() {}
   }]);
 
-  return GameConnection;
+  return Game;
 })();
 
 var runningGame = new Game();

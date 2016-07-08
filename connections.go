@@ -51,18 +51,15 @@ func (c *Connection) write(payload []byte) error {
 	return c.ws.WriteMessage(websocket.TextMessage, payload)
 }
 
+// Creates read/write pump for ws connection via Connection
 func brokerMessage(ws *websocket.Conn) *Connection {
-	uuid := newUUID()
-	response := []byte(`{"cmd":"online", "session":` + uuid + `}`)
 	conn := &Connection{
 		InputChan:  make(chan []byte),
 		OutputChan: make(chan []byte),
 		errChan:    make(chan struct{}),
 		ws:         ws,
-		uuid:       uuid,
+		uuid:       newUUID(),
 	}
-	// Initial message
-	conn.write(response)
 
 	go func() {
 		err := conn.readPump()

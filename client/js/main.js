@@ -12,16 +12,28 @@ function simpleUUID() {
 
 class Game {
   constructor() {
-    this.conn = new GameConnection("localhost:9090");
-    this.startButton = document.getElementById("start");
+    // Get from server
     this.playerID = simpleUUID();
+    this.host = "localhost";
+    this.login();
 
+    // this.conn = new GameConnection(``);
+    this.conn = new WebSocket(`ws://${this.host}:9090/ws`);
+    this.conn.onclose = this.onclose;
+    this.conn.onmessage = this.onMessage;
+
+    this.startButton = document.getElementById("start");
     this.searchTimer = 0;
     this.refreshTimeMS = 2*1000; // x seconds
     this.state = "NEW";
 
     // Binding, etc
     this.loop = this.loop.bind(this);
+  }
+  login() {
+    // $.ajax(``).done(msg => {
+    //
+    // });
   }
   loop(dt, first) {
     // For now all state logic here
@@ -45,20 +57,24 @@ class Game {
     this.searchTimer = performance.now();
     window.ttc = this.conn.wsConn;
   }
-}
-
-class GameConnection {
-  constructor(addr) {
-    this.wsConn = new WebSocket(`ws://${addr}/ws`);
-    this.wsConn.onclose = this.onclose;
-    this.wsConn.onmessage = this.onMessage;
-  }
   onClose(evt) {
     console.log("socket closed");
   }
   onMessage(evt) {
     console.log("msg", evt.data);
-    console.info(evt);
+    let msg = JSON.parse(evt.data);
+    if(msg["cmd"] === undefined) {
+      console.error("Bad message", evt);
+      return;
+    }
+    switch (msg.cmd) {
+      case "joined":
+        console.info("new connection");
+        this.serverID = msg['session'];
+        break;
+      default:
+        console.info("No match", msg.CMD);
+    }
   }
   onOpen() {}
 }

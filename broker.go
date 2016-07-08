@@ -8,14 +8,17 @@ type Broker struct {
 	broadcast  chan string // sample for testing
 	join       chan *Connection
 	disconnect chan *Connection
+
+	maxConnections int
 }
 
 func NewBroker() *Broker {
 	return &Broker{
-		Connections: make(map[string]*Connection),
-		broadcast:   make(chan string),
-		join:        make(chan *Connection),
-		disconnect:  make(chan *Connection),
+		Connections:    make(map[string]*Connection),
+		broadcast:      make(chan string),
+		join:           make(chan *Connection),
+		disconnect:     make(chan *Connection),
+		maxConnections: 10,
 	}
 }
 
@@ -26,6 +29,9 @@ func (b *Broker) Run() {
 		case conn := <-b.join:
 			log.Printf("Broker.Run, added new conn %s\n", conn.uuid)
 			b.Connections[conn.uuid] = conn
+			joinedMessage := []byte(`{"cmd":"joined", "session":"` + conn.uuid + `"}`)
+			// TODO: handle error, etc
+			conn.write(joinedMessage)
 			// XXX: If I want to loop over all Connections
 			// then I should do it elsewhere
 			go func(activeConn *Connection) {
