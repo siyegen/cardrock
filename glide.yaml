@@ -1,0 +1,3 @@
+package: github.com/siyegen/cardrock
+import:
+- package: github.com/gorilla/websocket
