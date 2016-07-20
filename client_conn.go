@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type Connection struct {
+type ClientConn struct {
 	InputChan  chan []byte // In from client/player
 	OutputChan chan []byte // Out to client/player
 	errChan    chan struct{}
@@ -15,11 +15,10 @@ type Connection struct {
 	uuid       string
 }
 
-func (c *Connection) readPump() error {
+func (c *ClientConn) readPump() error {
 	for {
 		_, msg, err := c.ws.ReadMessage()
 		if err == nil {
-			log.Println("readPump got Message")
 			c.InputChan <- msg
 			// player is still active, so bump their readDeadline
 			c.ws.SetReadDeadline(time.Now().Add(100 * time.Second))
@@ -29,7 +28,7 @@ func (c *Connection) readPump() error {
 	}
 }
 
-func (c *Connection) writePump() error {
+func (c *ClientConn) writePump() error {
 	for {
 		select {
 		case message, ok := <-c.OutputChan:
@@ -46,39 +45,40 @@ func (c *Connection) writePump() error {
 }
 
 // Wrap to always send Timestamp
-func (c *Connection) write(payload []byte) error {
+func (c *ClientConn) write(payload []byte) error {
 	c.ws.SetWriteDeadline(time.Now().Add(10 * time.Second))
 	return c.ws.WriteMessage(websocket.TextMessage, payload)
 }
 
-func brokerMessage(ws *websocket.Conn) *Connection {
+func handleNewClient(ws *websocket.Conn) *ClientConn {
 	uuid := newUUID()
 	response := []byte(`{"cmd":"online", "session":` + uuid + `}`)
-	conn := &Connection{
+
+	client := &ClientConn{
 		InputChan:  make(chan []byte),
 		OutputChan: make(chan []byte),
 		errChan:    make(chan struct{}),
 		ws:         ws,
 		uuid:       uuid,
 	}
-	// Initial message
-	conn.write(response)
-
 	go func() {
-		err := conn.readPump()
+		err := client.readPump()
 		if err != nil {
 			log.Println("Read failed, Error:", err)
-			conn.errChan <- struct{}{}
+			client.errChan <- struct{}{}
 		}
 	}()
 
 	go func() {
-		err := conn.writePump()
+		err := client.writePump()
 		if err != nil {
 			log.Println("Write failed, Error:", err)
-			conn.errChan <- struct{}{}
+			client.errChan <- struct{}{}
 		}
 	}()
 
-	return conn
+	// Initial message
+	client.OutputChan <- response
+
+	return client
 }

@@ -3,19 +3,19 @@ package main
 import "log"
 
 type Broker struct {
-	Connections map[string]*Connection
+	Clients map[string]*ClientConn
 
 	broadcast  chan string // sample for testing
-	join       chan *Connection
-	disconnect chan *Connection
+	join       chan *ClientConn
+	disconnect chan *ClientConn
 }
 
 func NewBroker() *Broker {
 	return &Broker{
-		Connections: make(map[string]*Connection),
-		broadcast:   make(chan string),
-		join:        make(chan *Connection),
-		disconnect:  make(chan *Connection),
+		Clients:    make(map[string]*ClientConn),
+		broadcast:  make(chan string),
+		join:       make(chan *ClientConn),
+		disconnect: make(chan *ClientConn),
 	}
 }
 
@@ -25,10 +25,9 @@ func (b *Broker) Run() {
 		select {
 		case conn := <-b.join:
 			log.Printf("Broker.Run, added new conn %s\n", conn.uuid)
-			b.Connections[conn.uuid] = conn
-			// XXX: If I want to loop over all Connections
-			// then I should do it elsewhere
-			go func(activeConn *Connection) {
+			b.Clients[conn.uuid] = conn
+
+			go func(activeConn *ClientConn) {
 				for {
 					select {
 					// XXX: Currently this causes it to spam empty messages
@@ -44,7 +43,7 @@ func (b *Broker) Run() {
 			}(conn)
 		case conn := <-b.disconnect:
 			log.Println("Broker.Run, disconnected conn")
-			delete(b.Connections, conn.uuid)
+			delete(b.Clients, conn.uuid)
 			close(conn.InputChan)
 			close(conn.OutputChan)
 		case msg := <-b.broadcast: // Simple version for testing
