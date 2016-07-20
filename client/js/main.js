@@ -14,6 +14,7 @@ class Game {
   constructor() {
     this.conn = new GameConnection("localhost:9090");
     this.startButton = document.getElementById("start");
+    this.stopButton = document.getElementById("stop");
     this.playerID = simpleUUID();
 
     this.searchTimer = 0;
@@ -37,6 +38,10 @@ class Game {
   }
   start() {
     this.loop(performance.now(), true);
+  }
+  stop() {
+    console.log("close!");
+    this.conn.wsConn.close();
   }
   begin() { // Part of searching for game
     if (this.state != "NEW") return;
@@ -69,3 +74,6 @@ runningGame.start();
 
 runningGame.startButton.addEventListener("click",
   () => runningGame.begin());
+
+runningGame.stopButton.addEventListener("click",
+  () => runningGame.stop());

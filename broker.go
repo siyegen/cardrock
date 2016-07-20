@@ -19,28 +19,27 @@ func NewBroker() *Broker {
 	}
 }
 
+func (b *Broker) addClient(client *ClientConn) {
+	for {
+		select {
+		// Get message, handle format, pass to controller...?
+		case msg, ok := <-client.InputChan:
+			if !ok {
+				return
+			}
+			log.Printf("[%s]sent: %s\n", client.uuid, msg)
+			b.broadcast <- string(msg)
+		}
+	}
+}
+
 func (b *Broker) Run() {
-	// Dispatch
 	for {
 		select {
 		case conn := <-b.join:
 			log.Printf("Broker.Run, added new conn %s\n", conn.uuid)
 			b.Clients[conn.uuid] = conn
-
-			go func(activeConn *ClientConn) {
-				for {
-					select {
-					// XXX: Currently this causes it to spam empty messages
-					// when closed.
-					case msg, ok := <-activeConn.InputChan:
-						if !ok {
-							return
-						}
-						log.Printf("[%s]sent: %s\n", activeConn.uuid, msg)
-						b.broadcast <- string(msg)
-					}
-				}
-			}(conn)
+			go b.addClient(conn)
 		case conn := <-b.disconnect:
 			log.Println("Broker.Run, disconnected conn")
 			delete(b.Clients, conn.uuid)
@@ -52,3 +51,11 @@ func (b *Broker) Run() {
 		}
 	}
 }
+
+type MainController struct {
+	State       string
+	Client      *ClientConn
+	ConnectedTo *ClientConn
+}
+
+var NilClientConn = &ClientConn{}

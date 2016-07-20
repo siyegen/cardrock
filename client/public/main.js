@@ -23,6 +23,7 @@ var Game = (function () {
 
     this.conn = new GameConnection("localhost:9090");
     this.startButton = document.getElementById("start");
+    this.stopButton = document.getElementById("stop");
     this.playerID = simpleUUID();
 
     this.searchTimer = 0;
@@ -51,6 +52,12 @@ var Game = (function () {
     key: "start",
     value: function start() {
       this.loop(performance.now(), true);
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      console.log("close!");
+      this.conn.wsConn.close();
     }
   }, {
     key: "begin",
@@ -101,6 +108,10 @@ runningGame.start();
 
 runningGame.startButton.addEventListener("click", function () {
   return runningGame.begin();
+});
+
+runningGame.stopButton.addEventListener("click", function () {
+  return runningGame.stop();
 });
 
 },{}]},{},[1])
